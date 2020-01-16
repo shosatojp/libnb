@@ -20,3 +20,5 @@ int array_expand(struct Array* array, int capacity);
 int array_push(struct Array* array, Element e);
 int array_ins(struct Array* array, Element e, int index);
 int array_del(struct Array* array, int index);
+int array_clear(struct Array* array);
+void* array_at(struct Array* array, int index);

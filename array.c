@@ -10,14 +10,20 @@ int array_init(struct Array* array, int elem_size, int isptr) {
 }
 
 int array_expand(struct Array* array, int capacity) {
-    void** tmp = (void**)calloc(capacity, array->elem_size);
-    if (array->data) {
-        memmove(tmp, array->data, (array->length) * array->elem_size);
-        free(array->data);
+    void** tmp = (void**)malloc(array->elem_size * capacity);
+    if (tmp) {
+        if (array->data) {
+            printf("%d\n", capacity);
+            memmove(tmp, array->data, (array->length) * array->elem_size);
+            free(array->data);
+        }
+        array->data = tmp;
+        array->capacity = capacity;
+        return 0;
+    } else {
+        // failed to allocate
+        return -1;
     }
-    array->data = tmp;
-    array->capacity = capacity;
-    return 0;
 }
 
 int array_push(struct Array* array, void* e) {
@@ -26,31 +32,35 @@ int array_push(struct Array* array, void* e) {
 
 int array_ins(struct Array* array, void* e, int index) {
     if (index > array->length || index < 0) {
+        // index out of range
         return -1;
+    } else if (array->capacity < array->length + 1 &&
+               array_expand(array, (array->capacity ? array->capacity : 10) * 2) < 0) {
+        // capacity
+        // failed to expand
+        return -1;
+    } else {
+        // copy
+        memmove(array->data + (index + 1),
+                array->data + (index),
+                (array->length - index) * array->elem_size);
+        memcpy(array->data + index, array->isptr ? &e : e, array->elem_size);
+        array->length++;
+        return 0;
     }
-    // capacity
-    if (array->capacity < array->length + 1) {
-        array_expand(array, (array->capacity ? array->capacity : 10) * 2);
-    }
-    // copy
-    memmove(array->data + (index + 1),
-            array->data + (index),
-            (array->length - index) * array->elem_size);
-    memcpy(array->data + index, array->isptr ? &e : e, array->elem_size);
-    array->length++;
-    return 0;
 }
 
 int array_del(struct Array* array, int index) {
     if (index >= array->length || index < 0) {
         return -1;
+    } else {
+        memmove(array->data + (index),
+                array->data + (index + 1),
+                (array->length - index - 1) * array->elem_size);
+        memset(array->data + (array->length - 1), 0, 1);
+        array->length--;
+        return 0;
     }
-    memmove(array->data + (index),
-            array->data + (index + 1),
-            (array->length - index - 1) * array->elem_size);
-    memset(array->data + (array->length - 1), 0, 1);
-    array->length--;
-    return 0;
 }
 
 int array_clear(struct Array* array) {
@@ -58,13 +68,14 @@ int array_clear(struct Array* array) {
 }
 
 void* array_at(struct Array* array, int index) {
-    return array->isptr ? *array->data : array->data;
+    void** ptr = array->data + index;
+    return array->isptr ? *ptr : ptr;
 }
 
 int main() {
     struct Array arr;
-    array_init(&arr, sizeof(struct point*), 1);
-    array_expand(&arr, 10);
+    array_init(&arr, sizeof(struct point), 0);
+    array_expand(&arr, 100000000);
 
     struct point p;
     p.x = 1;
@@ -77,17 +88,18 @@ int main() {
     array_push(&arr, &p);
     array_push(&arr, &p2);
     array_push(&arr, &p2);
-    for (int i = 0; i < 100000; i++)
+    for (int i = 0; i < 100000000; i++)
         array_push(&arr, &p);
 
     array_ins(&arr, &p2, 0);
     array_ins(&arr, &p2, 0);
     array_del(&arr, 3);
 
-    printf("length : %d, capacity : %d\n", arr.length, arr.capacity);
     for (int i = 0; i < arr.length; i++) {
-        printf("%lf, %lf\n",
-               ((struct point*)(array_at(&arr, i)))->x,
-               ((struct point*)(array_at(&arr, i)))->y);
+        // printf("%d: %lf, %lf\n", i,
+        //        ((struct point*)(array_at(&arr, i)))->x,
+        //        ((struct point*)(array_at(&arr, i)))->y);
     }
+    printf("length : %d, capacity : %d\n", arr.length, arr.capacity);
+    array_clear(&arr);
 }
