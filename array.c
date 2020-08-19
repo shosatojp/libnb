@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 int array_init(struct Array* array, int elem_size, int isptr) {
     memset(array, 0, sizeof(struct Array));
@@ -10,6 +11,7 @@ int array_init(struct Array* array, int elem_size, int isptr) {
 }
 
 int array_expand(struct Array* array, int capacity) {
+    // void** tmp = (void**)calloc(array->elem_size, capacity);
     void** tmp = (void**)malloc(array->elem_size * capacity);
     if (tmp) {
         if (array->data) {
@@ -26,11 +28,11 @@ int array_expand(struct Array* array, int capacity) {
     }
 }
 
-int array_push(struct Array* array, void* e) {
+int array_push(struct Array* array, Element e) {
     return array_ins(array, e, array->length);
 }
 
-int array_ins(struct Array* array, void* e, int index) {
+int array_ins(struct Array* array, Element e, int index) {
     if (index > array->length || index < 0) {
         // index out of range
         return -1;
@@ -67,15 +69,32 @@ int array_clear(struct Array* array) {
     free(array->data);
 }
 
-void* array_at(struct Array* array, int index) {
+Element array_at(struct Array* array, int index) {
     void** ptr = array->data + index;
     return array->isptr ? *ptr : ptr;
 }
 
 int main() {
     struct Array arr;
+
+    struct timespec f, t;
+    timespec_get(&f, TIME_UTC);
+
     array_init(&arr, sizeof(struct point), 0);
-    array_expand(&arr, 100000000);
+    array_expand(&arr, 128 * 1024 * 1024);
+
+    timespec_get(&t, TIME_UTC);
+    long ns;
+    long long s;
+
+    if (f.tv_nsec < t.tv_nsec) {
+        ns = t.tv_nsec - f.tv_nsec;
+        s = t.tv_sec - f.tv_sec;
+    } else {
+        ns = 1000000000 + t.tv_nsec - f.tv_nsec;
+        s = t.tv_sec - f.tv_sec - 1;
+    }
+    printf("%lld.%ld sec\n", s, ns);
 
     struct point p;
     p.x = 1;
@@ -88,7 +107,7 @@ int main() {
     array_push(&arr, &p);
     array_push(&arr, &p2);
     array_push(&arr, &p2);
-    for (int i = 0; i < 100000000; i++)
+    for (int i = 0; i < 10000000; i++)
         array_push(&arr, &p);
 
     array_ins(&arr, &p2, 0);
